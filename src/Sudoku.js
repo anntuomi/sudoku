@@ -147,15 +147,15 @@ const fillBox = (puzzle, startX, startY) => {
 const initPuzzle = () => {
 
   let puzzle = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0]
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""],
+    ["", "", "", "", "", "", "", "", ""]
   ];
 
   return (puzzle);
@@ -203,25 +203,11 @@ const isValidNum = (puzzle, num, x_loc, y_loc) => {
   return (true);
 }
 
-const getValidNum = (puzzle, x_loc, y_loc) => {
-
-  let num = puzzle[y_loc][x_loc] + 1;
-  while (num <= 9)
-  {
-    if (isValidNum(puzzle, num, x_loc, y_loc))
-      return (num);
-    num++;
-  }
-  return (0);
-}
-
-const solvePuzzle = (puzzle) => {
+const findFirstEmpty = (puzzle) => {
   let x = 0;
   let y = 0;
-  let i;
 
-  console.log(puzzle);
-  while (puzzle[y][x] !== 0 && y < 9)
+  while (puzzle[y][x] !== "" && y < 9)
   {
     x++;
     if (x === 9)
@@ -232,6 +218,16 @@ const solvePuzzle = (puzzle) => {
         break ;
     }
   }
+  return { x, y };
+}
+
+const solvePuzzle = (puzzle) => {
+
+  let coords = findFirstEmpty(puzzle);
+  let x = coords.x;
+  let y = coords.y;
+  let i;
+
   if (y === 9)
     return (true);
   for (i = 1; i <= 9; i++)
@@ -241,29 +237,106 @@ const solvePuzzle = (puzzle) => {
       puzzle[y][x] = i;
       if (solvePuzzle(puzzle) === true)
         return (true);
-      puzzle[y][x] = 0;
+      puzzle[y][x] = "";
     }
   }
   return (false);
 }
 
-const generateStartSeed = (puzzle) => {
-    fillBox(puzzle, 0, 6);
-    fillBox(puzzle, 3, 3);
-    fillBox(puzzle, 6, 0);
+const create2DCopy = (array) => array.map(inner => inner.slice());
+
+const hasMultipleSolutions = (puzzleToTest) => {
+  let solutionCount = 0;
+  let puzzle = create2DCopy(puzzleToTest);
+
+  const test = () => {
+    let coords = findFirstEmpty(puzzle);
+    let x = coords.x;
+    let y = coords.y;
+    let i;
+
+    if (y === 9)
+    {
+      solutionCount++;
+      return (true);
+    }
+    for (i = 1; i <= 9; i++)
+    {
+      if (isValidNum(puzzle, i, x, y))
+      {
+        puzzle[y][x] = i;
+        if (test(puzzle) === true)
+          return (solutionCount === 2 ? true : false);
+        puzzle[y][x] = "";
+      }
+    }
+    return (false);
+  };
+
+  return (test(puzzle));
 }
 
-const generatePuzzle = () => {
+const generateStartSeed = (puzzle) => {
+  switch (generateRandNumber(0, 4)) {
+    case 0:
+      fillBox(puzzle, 0, 6);
+      fillBox(puzzle, 3, 3);
+      fillBox(puzzle, 6, 0);
+    break ;
+    case 1:
+      fillBox(puzzle, 0, 0);
+      fillBox(puzzle, 3, 3);
+      fillBox(puzzle, 6, 6);
+     break ;
+    case 2:
+      fillBox(puzzle, 0, 3);
+      fillBox(puzzle, 3, 6);
+      fillBox(puzzle, 6, 0);
+      break ;
+    default:
+      fillBox(puzzle, 0, 3);
+      fillBox(puzzle, 3, 0);
+      fillBox(puzzle, 6, 6);
+  }
+}
+
+const deleteCells = (solvedPuzzle) => {
+  let puzzle = create2DCopy(solvedPuzzle);
+  let delCount = 0;
+  while (1) {
+    let x = generateRandNumber(0, 9);
+    let y = generateRandNumber(0, 9);
+    let val = puzzle[y][x];
+
+    if (val === "")
+      continue ;
+    puzzle[y][x] = "";
+    if (hasMultipleSolutions(puzzle) === true) {
+      puzzle[y][x] = val;
+      break ;
+    }
+    delCount++;
+  }
+  console.log(delCount);
+  return (puzzle);
+}
+
+const generateSolvedPuzzle = () => {
   let puzzle = initPuzzle();
   generateStartSeed(puzzle);
-  console.log(solvePuzzle(puzzle, 0, 0));
+  console.log(solvePuzzle(puzzle));
   return (puzzle);
 }
 
 const Sudoku = () => {
-  const solvedPuzzle = generatePuzzle();
+  const solvedPuzzle = generateSolvedPuzzle();
+  const emptyPuzzle = deleteCells(solvedPuzzle);
+  console.log("Multiple solutions?", hasMultipleSolutions(emptyPuzzle));
   return (
     <div>
+      <h1>Empty Puzzle</h1>
+      <Grid numbers={emptyPuzzle} />
+      <h1>Solved Puzzle</h1>
       <Grid numbers={solvedPuzzle} />
     </div>
   )
